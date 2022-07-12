@@ -24,8 +24,9 @@ typed-ast = "*"
 werkzeug = "*"
 wrapt = "*"
 flask-cors = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.9"
