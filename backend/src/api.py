@@ -28,7 +28,14 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks')
+def get_drinks():
+    drinks = Drink.query.all()
 
+    return jsonify({
+        'success': True,
+        'drinks': drinks
+    })
 
 '''
 @TODO implement endpoint
@@ -38,7 +45,14 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks-detail')
+def drinks_detail():
+    drinks = [drink.long() for drink in Drink.query.all()]
 
+    return jsonify({
+        'success': True,
+        'drinks': drinks
+    })
 
 '''
 @TODO implement endpoint
@@ -49,6 +63,22 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks', methods=['POST'])
+def create_drinks():
+    data = request.json_data
+    drink_data = json.load_data(data)
+
+    drink = Drink(
+        title=drink_data['title'],
+        recipe=drink_data['recipe']
+    )
+    drink.insert()
+
+    return jsonify({
+        'success': True,
+        'drinks': [drink.long()]
+    })
+
 
 
 '''
@@ -62,6 +92,15 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:drink_id>')
+def get_drink(drink_id):
+    drink = Drink.query.get_or_404(drink_id)
+    drink = drink.long()
+
+    return jsonify({
+        'success': True,
+        'drink': drink
+    })
 
 
 '''
@@ -74,6 +113,16 @@ CORS(app)
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
+
+@app.route('/drinks/<int:drink_id>', methods=['DELETE'])
+def delete_drinks(drink_id):
+    drink = Drink.query.get_or_404(drink_id)
+    drink.delete()
+
+    return jsonify({
+        'success': True,
+        'delete': drink_id
+    })
 
 
 # Error Handling
@@ -106,12 +155,26 @@ def unprocessable(error):
 @TODO implement error handler for 404
     error handler should conform to general task above
 '''
-
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "success": False,
+        "error": 404,
+        "message": "resource not found"
+    }), 404
 
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
+@app.errorhandler(401)
+def not_authorized(error):
+    return jsonify({
+        "success": False,
+        "error": 401,
+        "message": "Not Authorized"
+    }), 401
+
 
 if __name__ == "__main__":
     app.debug = True
