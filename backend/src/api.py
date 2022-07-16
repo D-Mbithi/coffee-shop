@@ -7,6 +7,7 @@ from flask_cors import CORS
 from .database.models import db_drop_and_create_all, setup_db, Drink
 from .auth.auth import AuthError, requires_auth
 
+
 app = Flask(__name__)
 setup_db(app)
 CORS(app)
@@ -21,7 +22,7 @@ CORS(app)
 
 # ROUTES
 '''
-@TODO implement endpoint
+@Done TODO implement endpoint
     GET /drinks
         it should be a public endpoint
         it should contain only the drink.short() data representation
@@ -30,7 +31,7 @@ CORS(app)
 '''
 @app.route('/drinks')
 def get_drinks():
-    drinks = Drink.query.all()
+    drinks = [drink.short() for drink in Drink.query.all()]
 
     return jsonify({
         'success': True,
@@ -38,7 +39,7 @@ def get_drinks():
     })
 
 '''
-@TODO implement endpoint
+@Done TODO implement endpoint
     GET /drinks-detail
         it should require the 'get:drinks-detail' permission
         it should contain the drink.long() data representation
@@ -46,6 +47,7 @@ def get_drinks():
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks-detail')
+@requires_auth('get:drinks-detail')
 def drinks_detail():
     drinks = [drink.long() for drink in Drink.query.all()]
 
@@ -55,7 +57,7 @@ def drinks_detail():
     })
 
 '''
-@TODO implement endpoint
+@Done TODO implement endpoint
     POST /drinks
         it should create a new row in the drinks table
         it should require the 'post:drinks' permission
@@ -64,6 +66,7 @@ def drinks_detail():
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks', methods=['POST'])
+@requires_auth('post:drinks')
 def create_drinks():
     data = request.json_data
     drink_data = json.load_data(data)
@@ -92,14 +95,23 @@ def create_drinks():
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks/<int:drink_id>')
-def get_drink(drink_id):
+@app.route('/drinks/<int:drink_id>', methods=['PATCH'])
+@requires_auth('patch:drinks')
+def update_drink(drink_id):
     drink = Drink.query.get_or_404(drink_id)
-    drink = drink.long()
+    data = request.get_json()
+
+    if 'title' in data.keys():
+        drink.title = data['title']
+
+    if 'recipe' in data.keys():
+        drink.recipe = data['recipe']
+
+    drink.update()
 
     return jsonify({
         'success': True,
-        'drink': drink
+        'drink': [drink.long()]
     })
 
 
@@ -115,6 +127,7 @@ def get_drink(drink_id):
 '''
 
 @app.route('/drinks/<int:drink_id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
 def delete_drinks(drink_id):
     drink = Drink.query.get_or_404(drink_id)
     drink.delete()
@@ -125,11 +138,11 @@ def delete_drinks(drink_id):
     })
 
 
+
 # Error Handling
 '''
 Example error handling for unprocessable entity
 '''
-
 
 @app.errorhandler(422)
 def unprocessable(error):
@@ -167,7 +180,7 @@ def not_found(error):
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
-@app.errorhandler(401)
+@app.errorhandler(AuthError)
 def not_authorized(error):
     return jsonify({
         "success": False,
