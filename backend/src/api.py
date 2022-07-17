@@ -31,7 +31,8 @@ CORS(app)
 '''
 @app.route('/drinks')
 def get_drinks():
-    drinks = [drink.short() for drink in Drink.query.all()]
+    selection = Drink.query.all()
+    drinks = [drink.short() for drink in selection]
 
     return jsonify({
         'success': True,
@@ -48,7 +49,7 @@ def get_drinks():
 '''
 @app.route('/drinks-detail')
 @requires_auth('get:drinks-detail')
-def drinks_detail():
+def drinks_detail(payload):
     drinks = [drink.long() for drink in Drink.query.all()]
 
     return jsonify({
@@ -67,22 +68,26 @@ def drinks_detail():
 '''
 @app.route('/drinks', methods=['POST'])
 @requires_auth('post:drinks')
-def create_drinks():
-    data = request.json_data
-    drink_data = json.load_data(data)
+def create_drinks(payload):
+    try:
+        drink_data = request.get_json()
+        new_recipe = drink_data.get('recipe')
 
-    drink = Drink(
-        title=drink_data['title'],
-        recipe=drink_data['recipe']
-    )
-    drink.insert()
+        title = drink_data.get('title')
+        recipe = json.dumps(new_recipe)
+
+        drink = Drink(
+            title=title,
+            recipe=recipe
+        )
+        drink.insert()
+    except:
+        abort(422)
 
     return jsonify({
         'success': True,
         'drinks': [drink.long()]
     })
-
-
 
 '''
 @TODO implement endpoint
@@ -97,7 +102,7 @@ def create_drinks():
 '''
 @app.route('/drinks/<int:drink_id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
-def update_drink(drink_id):
+def update_drink(payload, drink_id):
     drink = Drink.query.get_or_404(drink_id)
     data = request.get_json()
 
@@ -108,10 +113,11 @@ def update_drink(drink_id):
         drink.recipe = data['recipe']
 
     drink.update()
+    drink_list = [drink.long()]
 
     return jsonify({
         'success': True,
-        'drink': [drink.long()]
+        'drinks':drink_list
     })
 
 
@@ -128,7 +134,7 @@ def update_drink(drink_id):
 
 @app.route('/drinks/<int:drink_id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drinks(drink_id):
+def delete_drinks(payload, drink_id):
     drink = Drink.query.get_or_404(drink_id)
     drink.delete()
 
@@ -176,17 +182,30 @@ def not_found(error):
         "message": "resource not found"
     }), 404
 
+@app.errorhandler(403)
+def unauthorized(error):
+    return jsonify({
+        "success": False,
+        "error": 403,
+        "message": "Permission not found"
+    }), 403
+
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
-@app.errorhandler(AuthError)
+@app.errorhandler(401)
 def not_authorized(error):
     return jsonify({
         "success": False,
         "error": 401,
         "message": "Not Authorized"
     }), 401
+
+@app.errorhandler(AuthError)
+def process_AuthError(error):
+    response = jsonify(error.error)
+    response.status_code = error.status_code
 
 
 if __name__ == "__main__":
