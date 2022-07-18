@@ -1,5 +1,4 @@
 import json
-from wsgiref.util import request_uri
 from flask import abort, request
 from functools import wraps
 from jose import jwt
@@ -53,9 +52,7 @@ def get_token_auth_header():
             'description': 'Authorization header must be bearer token.'
         }, 401)
 
-    token = auth_parts[1]
-
-    return token
+    return auth_parts[1]
 
 '''
 @TODO implement check_permissions(permission, payload) method
@@ -126,7 +123,6 @@ def verify_decode_jwt(token):
                 audience=API_AUDIENCE,
                 issuer='https://' + AUTH0_DOMAIN + '/'
             )
-
             return payload
 
         except jwt.ExpiredSignatureError:

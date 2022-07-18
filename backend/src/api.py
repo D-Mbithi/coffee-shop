@@ -1,3 +1,4 @@
+from crypt import methods
 import os
 from flask import Flask, request, jsonify, abort
 from sqlalchemy import exc
@@ -18,7 +19,7 @@ CORS(app)
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 !! Running this function will add one
 '''
-# db_drop_and_create_all()
+db_drop_and_create_all()
 
 # ROUTES
 '''
@@ -29,9 +30,13 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks')
+@app.route('/drinks', methods=['GET'])
 def get_drinks():
-    selection = Drink.query.all()
+    try:
+        selection = Drink.query.all()
+    except:
+        abort(404)
+
     drinks = [drink.short() for drink in selection]
 
     return jsonify({
@@ -50,7 +55,12 @@ def get_drinks():
 @app.route('/drinks-detail')
 @requires_auth('get:drinks-detail')
 def drinks_detail(payload):
-    drinks = [drink.long() for drink in Drink.query.all()]
+    try:
+        selection = Drink.query.all()
+    except:
+        abort(404)
+
+    drinks = [drink.long() for drink in selection]
 
     return jsonify({
         'success': True,
@@ -69,20 +79,19 @@ def drinks_detail(payload):
 @app.route('/drinks', methods=['POST'])
 @requires_auth('post:drinks')
 def create_drinks(payload):
-    try:
-        drink_data = request.get_json()
-        new_recipe = drink_data.get('recipe')
 
-        title = drink_data.get('title')
-        recipe = json.dumps(new_recipe)
+    drink_data = request.get_json()
+    recipe = drink_data.get('recipe')
 
-        drink = Drink(
-            title=title,
-            recipe=recipe
-        )
-        drink.insert()
-    except:
-        abort(422)
+    title = drink_data.get('title')
+    recipe = json.dumps(recipe)
+
+    drink = Drink(
+        title=title,
+        recipe=recipe
+    )
+    drink.insert()
+
 
     return jsonify({
         'success': True,
@@ -175,37 +184,40 @@ def unprocessable(error):
     error handler should conform to general task above
 '''
 @app.errorhandler(404)
-def not_found(error):
+def resource_not_found_error(error):
     return jsonify({
-        "success": False,
-        "error": 404,
-        "message": "resource not found"
-    }), 404
+        'success':False,
+        'error':404,
+        'message':"Resource Not Found"
+        }), 404
 
-@app.errorhandler(403)
-def forbidden(error):
+@app.errorhandler(400)
+def bad_request_error(error):
     return jsonify({
-        "success": False,
-        "error": 403,
-        "message": "Forbidden"
-    }), 403
+        'success':False,
+        'error':400,
+        'message':"Bad Request"
+        })
+
+@app.errorhandler(401)
+def unauthorizedt_error(error):
+    return jsonify({
+        'success':False,
+        'error':401,
+        'message':"Unauthorized"
+        })
 
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
-@app.errorhandler(401)
-def unauthorized(error):
-    return jsonify({
-        "success": False,
-        "error": 401,
-        "message": "Unauthorized"
-    }), 401
-
 @app.errorhandler(AuthError)
-def process_AuthError(error):
-    response = jsonify(error.error)
-    response.status_code = error.status_code
+def auth_error(error):
+    return jsonify({
+        'success': False,
+        'error': error.status_code,
+        'message': error.error['description']
+    }), error.status_code
 
 
 if __name__ == "__main__":
