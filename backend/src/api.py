@@ -183,11 +183,11 @@ def not_found(error):
     }), 404
 
 @app.errorhandler(403)
-def unauthorized(error):
+def forbidden(error):
     return jsonify({
         "success": False,
         "error": 403,
-        "message": "Permission not found"
+        "message": "Forbidden"
     }), 403
 
 '''
@@ -195,11 +195,11 @@ def unauthorized(error):
     error handler should conform to general task above
 '''
 @app.errorhandler(401)
-def not_authorized(error):
+def unauthorized(error):
     return jsonify({
         "success": False,
         "error": 401,
-        "message": "Not Authorized"
+        "message": "Unauthorized"
     }), 401
 
 @app.errorhandler(AuthError)
